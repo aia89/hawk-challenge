@@ -80,25 +80,23 @@ jobs:
           set -e  
           set -o pipefail  
 
-          # Get the exact image tag that was pushed
-          TAG_LIST="${{ steps.meta.outputs.tags }}"
+      - name: Commit and push updated values.yaml
+        run: |
           IMAGE_TAG="${GITHUB_SHA::7}"
-
-          # Verify we got a tag
-          if [ -z "$IMAGE_TAG" ]; then
-            echo "Error: Failed to extract image tag"
-            exit 1
-          fi
-
+      
           # Update Helm values
           sed -i "s|tag:.*|tag: ${IMAGE_TAG}|" helm-chart/values.yaml
           sed -i "s|repository:.*|repository: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}|" helm-chart/values.yaml
-    
-      - name: Commit and push changes
-        run: |
+      
+          # Set Git user
           git config --global user.name "GitHub Actions"
-          git config --global user.email "you@example.com"
+          git config --global user.email "${{ secrets.GIT_COMMITTER_EMAIL }}"
+      
+          # Use your GH_PAT token for authentication
           git remote set-url origin https://x-access-token:${{ secrets.GH_PAT }}@github.com/aia89/hawk-challenge.git
+      
+          # Commit and push
           git add helm-chart/values.yaml
           git commit -m "Update image tag to ${IMAGE_TAG} [skip ci]" || echo "Nothing to commit"
           git push
+      
