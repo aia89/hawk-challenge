@@ -101,7 +101,7 @@ argocd app get hello-world
 ```
  
 
- ![This ensures ArgoCD can deploy the latest image via GitOps](assets/06.png)
+ ![This ensures ArgoCD can deploy the latest image via GitOps](assets/09.png)
 
 ### Next-Check helm
                    
