@@ -73,7 +73,7 @@ git push origin main
 ```
 Then go to your GHA tab in your repo and check the pipeline
 
-![Pipeline built success](assets/03.png)
+
 
 
 
@@ -123,7 +123,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/aia89/my-pipeline.git
+    repoURL: https://github.com/aia89/hawk-challenge.git
     targetRevision: HEAD
     path: helm-chart
   destination:
@@ -149,3 +149,4 @@ Trigger ArgoCD to auto-sync as soon as there's a push to main.
 2. Test. (make any change in readme and it should trigger ArgoCD automatically)
 
     ![Final auto sync](assets/07.png)
+
