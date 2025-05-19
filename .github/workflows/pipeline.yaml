@@ -75,28 +75,25 @@ jobs:
             echo "First tag: $(echo "${{ steps.meta.outputs.tags }}" | cut -d ',' -f 1)"
 
 
-      - name: Update Helm chart with new image tag
+      - name: Update Helm chart and push changes
         run: |
-          set -e  
-          set -o pipefail  
-
-      - name: Commit and push updated values.yaml
-        run: |
-          IMAGE_TAG="${GITHUB_SHA::7}"
-      
-          # Update Helm values
-          sed -i "s|tag:.*|tag: ${IMAGE_TAG}|" helm-chart/values.yaml
-          sed -i "s|repository:.*|repository: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}|" helm-chart/values.yaml
-      
-          # Set Git user
-          git config --global user.name "GitHub Actions"
-          git config --global user.email "${{ secrets.GIT_COMMITTER_EMAIL }}"
-      
-          # Use your GH_PAT token for authentication
-          git remote set-url origin https://x-access-token:${{ secrets.GH_PAT }}@github.com/aia89/hawk-challenge.git
-      
-          # Commit and push
-          git add helm-chart/values.yaml
-          git commit -m "Update image tag to ${IMAGE_TAG} [skip ci]" || echo "Nothing to commit"
-          git push
+            set -e  
+            set -o pipefail  
+            IMAGE_TAG="${GITHUB_SHA::7}"
+            
+            # Update Helm values
+            sed -i "s|tag:.*|tag: ${IMAGE_TAG}|" helm-chart/values.yaml
+            sed -i "s|repository:.*|repository: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}|" helm-chart/values.yaml
+            
+            # Set Git user
+            git config --global user.name "GitHub Actions"
+            git config --global user.email "${{ secrets.GIT_COMMITTER_EMAIL }}"
+            
+            # Use your GH_PAT token for authentication
+            git remote set-url origin https://x-access-token:${{ secrets.GH_PAT }}@github.com/aia89/hawk-challenge.git
+            
+            # Commit and push
+            git add helm-chart/values.yaml
+            git commit -m "Update image tag to ${IMAGE_TAG} [skip ci]" || echo "Nothing to commit"
+            git push
       
