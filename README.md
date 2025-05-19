@@ -142,7 +142,7 @@ Trigger ArgoCD to auto-sync as soon as there's a push to main.
 
 -Our ArgoCD app should be set to automated sync (from our CLI - which i did earlier)
 
--Must have a repo:  https://github.com/aia89/my-pipeline
+-Must have a repo:  https://github.com/aia89/hawk-challenge
 
 1. Add a webhook in github settings make sure specify ArgoCDs ip address
    
