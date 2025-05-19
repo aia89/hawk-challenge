@@ -157,3 +157,6 @@ k8s env preview
 
 ![Kubernetes deployment ArgoCD on GCP cluster](assets/09.png)
 
+
+All clusters and IP purged upon success run. 
+
