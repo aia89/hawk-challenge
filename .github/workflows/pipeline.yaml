@@ -1,113 +1,82 @@
-name: Build, Test, and Deploy
-
-on:
-  workflow_dispatch:
-  push:
-    branches: [ "main" ]
-
-env:
-  REGISTRY: docker.io
-  IMAGE_NAME: ${{ secrets.DOCKER_HUB_USERNAME }}/hello-world
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      
-      - name: Set up JDK 17
-        uses: actions/setup-java@v3
-        with:
-          java-version: '17'
-          distribution: 'temurin'
-      
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
-      
-      - name: Build with Gradle
-        run: ./gradlew build
-      
-      - name: Run tests
-        run: ./gradlew test
-      
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_HUB_USERNAME }}
-          password: ${{ secrets.DOCKER_HUB_TOKEN }}
-          registry: docker.io
-
-      - name: Extract metadata for Docker
-        id: meta
-        uses: docker/metadata-action@v4
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=sha,format=long
-            type=ref,event=branch
-            type=ref,event=tag
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          secrets: |
-            "username=${{ secrets.DOCKER_HUB_USERNAME }}"
-            "password=${{ secrets.DOCKER_HUB_TOKEN }}"
-      - name: Pull pushed image
-        run: |
-            ocker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest || true
-
-
-      - name: Debug Tags Output
-        run: |
-            echo "All tags: ${{ steps.meta.outputs.tags }}"
-            echo "First tag: $(echo "${{ steps.meta.outputs.tags }}" | cut -d ',' -f 1)"
-
-
-      - name: Update Helm chart and push changes
-        run: |
-            set -e  
-            set -o pipefail  
-            # Verify PAT is available (debug)
-            if [ -z "${{ secrets.GH_PAT }}" ]; then
-              echo "ERROR: GH_PAT secret is not set!"
-              exit 1
-             fi
-
-            IMAGE_TAG="${GITHUB_SHA::7}"
-            
-            # Update Helm values
-            sed -i "s|tag:.*|tag: ${IMAGE_TAG}|" helm-chart/values.yaml
-            sed -i "s|repository:.*|repository: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}|" helm-chart/values.yaml
-            
-            # Set Git user
+---
+  name: CI/CD Pipeline
+  on:
+    workflow_dispatch: null
+    push:
+      branches:
+        - main
+  env:
+    REGISTRY: docker.io
+    IMAGE_NAME: ${{ secrets.DOCKER_HUB_USERNAME }}/hello-world
+    HELM_CHART_DIR: helm-chart
+  jobs:
+    build-and-deploy:
+      runs-on: ubuntu-latest
+      steps:
+        - name: Checkout code
+          uses: actions/checkout@v4
+          with:
+            fetch-depth: 0
+        - name: Set up JDK 17
+          uses: actions/setup-java@v3
+          with:
+            java-version: "17"
+            distribution: temurin
+            cache: gradle
+        - name: Build and Test
+          run: |
+            chmod +x gradlew
+            ./gradlew build test
+        - name: Docker Login
+          uses: docker/login-action@v3
+          with:
+            username: ${{ secrets.DOCKER_HUB_USERNAME }}
+            password: ${{ secrets.DOCKER_HUB_TOKEN }}
+        - name: Extract Docker metadata
+          id: meta
+          uses: docker/metadata-action@v4
+          with:
+            images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+            tags: |
+              type=sha,format=short
+              type=ref,event=branch
+              type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+        - name: Build and Push
+          uses: docker/build-push-action@v5
+          with:
+            context: .
+            push: true
+            tags: ${{ steps.meta.outputs.tags }}
+            labels: ${{ steps.meta.outputs.labels }}
+        - name: Configure Git and SSH
+          run: >
             git config --global user.name "GitHub Actions"
-            git config --global user.email "${{ secrets.GIT_COMMITTER_EMAIL }}"
-            
-            # URL for authentication
-            git remote set-url origin git@github.com:aia89/hawk-challenge.git
-
-            # NEW: Add GitHub to known hosts
+  
+            git config --global user.email "actions@github.com"
+  
+  
             mkdir -p ~/.ssh
-            echo "github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl" >> ~/.ssh/known_hosts
-            
-            # NEW: Use SSH key for authentication
-            echo "${{ secrets.DEPLOY_KEY }}" > ~/.ssh/id_ed25519
+  
+            echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519  #due to authentication issue added private key
+  
             chmod 600 ~/.ssh/id_ed25519
-            
-            # Commit and push
-            git add helm-chart/values.yaml
-            git commit -m "Update image tag to ${IMAGE_TAG} [skip ci]" || echo "Nothing to commit"
-            git push  origin main
-      
+  
+            echo "github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl" > ~/.ssh/known_hosts
+        - name: Update Helm Chart
+          run: >
+            set -euo pipefail
+  
+  
+            IMAGE_TAG="${GITHUB_SHA::7}"
+  
+            sed -i "s|tag:.*|tag: ${IMAGE_TAG}|" ${{ env.HELM_CHART_DIR }}/values.yaml
+  
+            sed -i "s|repository:.*|repository: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}|" ${{ env.HELM_CHART_DIR }}/values.yaml
+  
+  
+            git add ${{ env.HELM_CHART_DIR }}/values.yaml
+  
+            git commit -m "CI: Update image to ${IMAGE_TAG} [skip ci]" || exit 0
+  
+            git push origin main
+  
