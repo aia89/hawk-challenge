@@ -150,3 +150,10 @@ Trigger ArgoCD to auto-sync as soon as there's a push to main.
 
     ![Final auto sync](assets/08.png)
 
+
+
+
+k8s env preview
+
+![Kubernetes deployment ArgoCD on GCP cluster](assets/09.png)
+
