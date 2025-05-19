@@ -1,3 +1,3 @@
 image:
   repository: docker.io/aiados/hello-world
-  tag: 9a03525
+  tag: sha-9a035252eba3faa0620ab996390b8d1b0d0eb1b3
