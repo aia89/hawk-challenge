@@ -50,7 +50,7 @@
             labels: ${{ steps.meta.outputs.labels }}
           
         - name: Configure Git and SSH
-          run: >
+          run: |
             # Configure Git identity
         
             git config --global user.name "GitHub Actions"
@@ -101,7 +101,7 @@
         
         
             # Push changes
-        
+            git remote set-url origin https://x-access-token:${{ secrets.GH_PAT }}@github.com/${{ github.repository }}
             git push origin main
               
   
