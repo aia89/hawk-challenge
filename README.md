@@ -148,5 +148,5 @@ Trigger ArgoCD to auto-sync as soon as there's a push to main.
    
 2. Test. (make any change in readme and it should trigger ArgoCD automatically)
 
-    ![Final auto sync](assets/07.png)
+    ![Final auto sync](assets/08.png)
 
