@@ -4,3 +4,5 @@ gradle-8.4-bin.zip
 build/
 !gradle/wrapper/gradle-wrapper.jar
 !gradle/wrapper/gradle-wrapper.properties
+*deploy-key
+*.pub
