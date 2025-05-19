@@ -48,35 +48,60 @@
             push: true
             tags: ${{ steps.meta.outputs.tags }}
             labels: ${{ steps.meta.outputs.labels }}
+          
         - name: Configure Git and SSH
           run: >
+            # Configure Git identity
+        
             git config --global user.name "GitHub Actions"
-  
             git config --global user.email "actions@github.com"
-  
-  
+        
+        
+            # Setup SSH directory and permissions
+        
             mkdir -p ~/.ssh
-  
-            echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519  #due to authentication issue added private key
-  
+            chmod 700 ~/.ssh
+        
+        
+            # Add private key (from GitHub Secrets)
+        
+            echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
             chmod 600 ~/.ssh/id_ed25519
-  
+        
+        
+            # Add GitHub to known hosts
+        
             echo "github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl" > ~/.ssh/known_hosts
+            chmod 644 ~/.ssh/known_hosts
+            
         - name: Update Helm Chart
           run: >
+            # Enable strict error handling
+        
             set -euo pipefail
-  
-  
+        
+        
+            # Get short commit hash for image tag
+        
             IMAGE_TAG="${GITHUB_SHA::7}"
-  
-            sed -i "s|tag:.*|tag: ${IMAGE_TAG}|" ${{ env.HELM_CHART_DIR }}/values.yaml
-  
-            sed -i "s|repository:.*|repository: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}|" ${{ env.HELM_CHART_DIR }}/values.yaml
-  
-  
-            git add ${{ env.HELM_CHART_DIR }}/values.yaml
-  
+        
+        
+            # Update Helm values
+        
+            sed -i "s|tag:.*|tag: ${IMAGE_TAG}|" "${{ env.HELM_CHART_DIR }}/values.yaml"
+        
+            sed -i "s|repository:.*|repository: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}|" "${{ env.HELM_CHART_DIR }}/values.yaml"
+        
+        
+            # Commit changes (silently skip if no changes)
+        
+            git add "${{ env.HELM_CHART_DIR }}/values.yaml"
+        
             git commit -m "CI: Update image to ${IMAGE_TAG} [skip ci]" || exit 0
-  
+        
+        
+            # Push changes
+        
             git push origin main
+              
   
